@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+  />
+
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#168a3a" />
+
+  <title>KampScore</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #168a3a;
+      color: white;
+    }
+
+    body {
+      overscroll-behavior: none;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .field {
+      position: relative;
+      width: 100vw;
+      height: 100dvh;
+
+      padding-top: env(safe-area-inset-top);
+      padding-right: env(safe-area-inset-right);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+
+      background:
+        repeating-linear-gradient(
+          90deg,
+          #168a3a 0,
+          #168a3a 12.5%,
+          #1b9441 12.5%,
+          #1b9441 25%
+        );
+
+      overflow: hidden;
+    }
+
+    .outline {
+      position: absolute;
+      inset:
+        calc(12px + env(safe-area-inset-top))
+        calc(12px + env(safe-area-inset-right))
+        calc(12px + env(safe-area-inset-bottom))
+        calc(12px + env(safe-area-inset-left));
+
+      border: 3px solid rgba(255,255,255,0.9);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .midline {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      top: 50%;
+      height: 3px;
+      background: white;
+      transform: translateY(-50%);
+      opacity: 0.9;
+      z-index: 1;
+    }
+
+    .center-circle {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      border: 3px solid white;
+      border-radius: 50%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.8;
+      z-index: 1;
+    }
+
+    .center-dot {
+      position: absolute;
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: white;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+    }
+
+    .penalty-box {
+      position: absolute;
+      left: 25%;
+      width: 50%;
+      height: 78px;
+      border-left: 3px solid rgba(255,255,255,0.8);
+      border-right: 3px solid rgba(255,255,255,0.8);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .penalty-top {
+      top: 12px;
+      border-bottom: 3px solid rgba(255,255,255,0.8);
+    }
+
+    .penalty-bottom {
+      bottom: 12px;
+      border-top: 3px solid rgba(255,255,255,0.8);
+    }
+
+    .team {
+      position: absolute;
+      left: 0;
+      width: 100%;
+      height: 50%;
+      z-index: 2;
+
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .home {
+      top: 0;
+      padding-bottom: 48px;
+    }
+
+    .away {
+      bottom: 0;
+      padding-top: 48px;
+    }
+
+    .team-name {
+      width: min(80vw, 430px);
+      border: none;
+      outline: none;
+      background: transparent;
+      color: white;
+      text-align: center;
+
+      font-size: clamp(20px, 5vw, 38px);
+      font-weight: 800;
+      letter-spacing: 1.5px;
+
+      text-transform: uppercase;
+      text-shadow: 0 2px 5px rgba(0,0,0,0.25);
+    }
+
+    .team-name::placeholder {
+      color: rgba(255,255,255,0.7);
+    }
+
+    .score {
+      font-size: clamp(88px, 22vw, 180px);
+      font-weight: 900;
+      line-height: 0.9;
+
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 4px 12px rgba(0,0,0,0.25);
+
+      margin-top: 4px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 30px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: none;
+      color: white;
+      font-weight: 800;
+      touch-action: manipulation;
+      cursor: pointer;
+    }
+
+    .score-button {
+      width: 74px;
+      height: 74px;
+      border-radius: 50%;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 42px;
+      line-height: 1;
+
+      background: rgba(0,0,0,0.38);
+      border: 2px solid rgba(255,255,255,0.5);
+
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .score-button:active,
+    .clock-button:active {
+      transform: scale(0.92);
+    }
+
+    .clock {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      background: rgba(0,0,0,0.84);
+      padding: 10px 14px;
+      border-radius: 999px;
+
+      box-shadow: 0 5px 18px rgba(0,0,0,0.35);
+      white-space: nowrap;
+    }
+
+    .clock-time {
+      min-width: 126px;
+      text-align: center;
+
+      font-size: clamp(26px, 7vw, 44px);
+      font-weight: 900;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .clock-button {
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+
+      background: rgba(255,255,255,0.18);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 19px;
+    }
+
+    .goal-flash {
+      animation: goalPulse 0.28s ease;
+    }
+
+    @keyframes goalPulse {
+      0% {
+        transform: scale(1);
+      }
+
+      50% {
+        transform: scale(1.18);
+      }
+
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @media (orientation: landscape) {
+      .score {
+        font-size: clamp(68px, 16vh, 120px);
+      }
+
+      .team-name {
+        font-size: clamp(18px, 4vh, 30px);
+      }
+
+      .score-button {
+        width: 58px;
+        height: 58px;
+        font-size: 32px;
+      }
+
+      .controls {
+        gap: 24px;
+        margin-top: 7px;
+      }
+
+      .clock-time {
+        font-size: 30px;
+        min-width: 105px;
+      }
+
+      .clock-button {
+        width: 40px;
+        height: 40px;
+      }
+
+      .center-circle {
+        width: 120px;
+        height: 120px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <main class="field">
+
+    <div class="outline"></div>
+
+    <div class="midline"></div>
+    <div class="center-circle"></div>
+    <div class="center-dot"></div>
+
+    <div class="penalty-box penalty-top"></div>
+    <div class="penalty-box penalty-bottom"></div>
+
+    <section class="team home">
+
+      <input
+        id="homeName"
+        class="team-name"
+        value="HJEMMELAG"
+        maxlength="25"
+        aria-label="Hjemmelag"
+      />
+
+      <div class="score" id="homeScore">0</div>
+
+      <div class="controls">
+        <button
+          class="score-button"
+          onclick="changeScore('home', -1)"
+          aria-label="Trekk fra mål hjemmelag"
+        >
+          −
+        </button>
+
+        <button
+          class="score-button"
+          onclick="changeScore('home', 1)"
+          aria-label="Legg til mål hjemmelag"
+        >
+          +
+        </button>
+      </div>
+
+    </section>
+
+    <div class="clock">
+
+      <button
+        class="clock-button"
+        id="playButton"
+        onclick="toggleClock()"
+        aria-label="Start eller pause kampklokke"
+      >
+        ▶
+      </button>
+
+      <div class="clock-time" id="clock">
+        00:00
+      </div>
+
+      <button
+        class="clock-button"
+        onclick="resetMatch()"
+        aria-label="Nullstill kampen"
+      >
+        ↺
+      </button>
+
+    </div>
+
+    <section class="team away">
+
+      <input
+        id="awayName"
+        class="team-name"
+        value="BORTELAG"
+        maxlength="25"
+        aria-label="Bortelag"
+      />
+
+      <div class="score" id="awayScore">0</div>
+
+      <div class="controls">
+        <button
+          class="score-button"
+          onclick="changeScore('away', -1)"
+          aria-label="Trekk fra mål bortelag"
+        >
+          −
+        </button>
+
+        <button
+          class="score-button"
+          onclick="changeScore('away', 1)"
+          aria-label="Legg til mål bortelag"
+        >
+          +
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    const STORAGE_KEY = "kampScoreStateV2";
+
+    let state = {
+      homeScore: 0,
+      awayScore: 0,
+
+      homeName: "HJEMMELAG",
+      awayName: "BORTELAG",
+
+      elapsedSeconds: 0,
+
+      running: false,
+
+      startTime: null
+    };
+
+    let timer = null;
+
+
+    function saveState() {
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(state)
+      );
+    }
+
+
+    function loadState() {
+      const saved =
+        localStorage.getItem(STORAGE_KEY);
+
+      if (!saved) {
+        renderAll();
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(saved);
+
+        state = {
+          ...state,
+          ...parsed
+        };
+
+        /*
+          Hvis klokken var i gang da telefonen
+          ble låst eller siden ble lukket,
+          beregner vi tiden ut fra faktisk klokkeslett.
+        */
+
+        if (
+          state.running &&
+          state.startTime
+        ) {
+          state.elapsedSeconds =
+            Math.max(
+              0,
+              Math.floor(
+                (Date.now() - state.startTime) / 1000
+              )
+            );
+        }
+
+        renderAll();
+
+        if (state.running) {
+          startTimer();
+        }
+
+      } catch (error) {
+        console.log("Kunne ikke lese lagret kamp.");
+        renderAll();
+      }
+    }
+
+
+    function renderAll() {
+      document.getElementById("homeScore").textContent =
+        state.homeScore;
+
+      document.getElementById("awayScore").textContent =
+        state.awayScore;
+
+      document.getElementById("homeName").value =
+        state.homeName;
+
+      document.getElementById("awayName").value =
+        state.awayName;
+
+      document.getElementById("playButton").textContent =
+        state.running ? "Ⅱ" : "▶";
+
+      updateClockDisplay();
+    }
+
+
+    function changeScore(team, amount) {
+      if (team === "home") {
+        state.homeScore =
+          Math.max(
+            0,
+            state.homeScore + amount
+          );
+
+        animateScore("homeScore");
+      }
+
+      if (team === "away") {
+        state.awayScore =
+          Math.max(
+            0,
+            state.awayScore + amount
+          );
+
+        animateScore("awayScore");
+      }
+
+      saveState();
+      renderAll();
+    }
+
+
+    function animateScore(elementId) {
+      const element =
+        document.getElementById(elementId);
+
+      element.classList.remove("goal-flash");
+
+      void element.offsetWidth;
+
+      element.classList.add("goal-flash");
+    }
+
+
+    function toggleClock() {
+      if (!state.running) {
+
+        /*
+          Vi setter starttid slik at eventuell
+          tidligere pause beholdes.
+        */
+
+        state.startTime =
+          Date.now() -
+          state.elapsedSeconds * 1000;
+
+        state.running = true;
+
+        startTimer();
+
+      } else {
+
+        refreshElapsedTime();
+
+        state.running = false;
+
+        clearInterval(timer);
+        timer = null;
+      }
+
+      saveState();
+      renderAll();
+    }
+
+
+    function startTimer() {
+      clearInterval(timer);
+
+      timer = setInterval(() => {
+        if (!state.running) {
+          return;
+        }
+
+        refreshElapsedTime();
+
+        updateClockDisplay();
+
+      }, 250);
+    }
+
+
+    function refreshElapsedTime() {
+      if (
+        state.running &&
+        state.startTime
+      ) {
+        state.elapsedSeconds =
+          Math.max(
+            0,
+            Math.floor(
+              (Date.now() - state.startTime) / 1000
+            )
+          );
+      }
+    }
+
+
+    function updateClockDisplay() {
+      const minutes =
+        Math.floor(
+          state.elapsedSeconds / 60
+        );
+
+      const seconds =
+        state.elapsedSeconds % 60;
+
+      document.getElementById("clock").textContent =
+        String(minutes).padStart(2, "0") +
+        ":" +
+        String(seconds).padStart(2, "0");
+    }
+
+
+    function resetMatch() {
+      const confirmed =
+        confirm(
+          "Vil du nullstille hele kampen?\n\nScore og kampklokke blir satt til 0."
+        );
+
+      if (!confirmed) {
+        return;
+      }
+
+      clearInterval(timer);
+      timer = null;
+
+      /*
+        Vi beholder lagnavnene,
+        men nullstiller score og klokke.
+      */
+
+      state.homeScore = 0;
+      state.awayScore = 0;
+
+      state.elapsedSeconds = 0;
+
+      state.running = false;
+      state.startTime = null;
+
+      saveState();
+      renderAll();
+    }
+
+
+    /*
+      Lagre lagnavn automatisk
+    */
+
+    document
+      .getElementById("homeName")
+      .addEventListener("input", event => {
+
+        state.homeName =
+          event.target.value;
+
+        saveState();
+      });
+
+
+    document
+      .getElementById("awayName")
+      .addEventListener("input", event => {
+
+        state.awayName =
+          event.target.value;
+
+        saveState();
+      });
+
+
+    /*
+      Når iPhone låses kan Safari stoppe
+      JavaScript midlertidig.
+
+      Når appen blir synlig igjen,
+      beregner vi derfor tiden fra Date.now().
+    */
+
+    document.addEventListener(
+      "visibilitychange",
+      () => {
+
+        if (
+          !document.hidden &&
+          state.running
+        ) {
+          refreshElapsedTime();
+          updateClockDisplay();
+          saveState();
+        }
+      }
+    );
+
+
+    /*
+      Samme idé når vinduet får fokus igjen.
+    */
+
+    window.addEventListener(
+      "focus",
+      () => {
+
+        if (state.running) {
+          refreshElapsedTime();
+          updateClockDisplay();
+          saveState();
+        }
+      }
+    );
+
+
+    /*
+      Lagre også før siden lukkes.
+    */
+
+    window.addEventListener(
+      "pagehide",
+      () => {
+
+        if (state.running) {
+          refreshElapsedTime();
+        }
+
+        saveState();
+      }
+    );
+
+
+    /*
+      Start appen
+    */
+
+    loadState();
+
+  </script>
+
+</body>
+</html>
